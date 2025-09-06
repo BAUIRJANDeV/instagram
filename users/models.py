@@ -41,7 +41,7 @@ class CustomUser(BaseModel,AbstractUser):
     auth_type = models.CharField(max_length=31,choices=AUTH_TYPE)
     user_role = models.CharField(max_length=31,choices=USER_ROLE,default=ORDINARY_USER)
     auth_status = models.CharField(max_length=31,choices=AUTH_STATUS,default=NEW)
-    email = models.EmailField(unique=True,blank=True,null=True)
+    email = models.EmailField(unique=False,blank=True,null=True)
     phone_nuber = models.CharField(unique=True,max_length=13,blank=True,null=True)
     photo = models.ImageField(upload_to='users_pohotos/',blank=True,null=True,validators=[FileExtensionValidator(allowed_extensions=['png','jpg','jpeg'])])
 
@@ -49,13 +49,16 @@ class CustomUser(BaseModel,AbstractUser):
     def __str__(self):
         return self.username
 
-    def create_verfiy_code(self,verify_type):
-        code=random.randint(1000,9999)
+    def create_verify_code(self, verify_type):
+        if not self.pk:  # foydalanuvchi DB’da saqlanmagan bo‘lsa
+            self.save()
+        code = random.randint(1000, 9999)
         CodeVerified.objects.create(
             code=code,
             user=self,
             verify_type=verify_type
         )
+        return code
 
 
     def check_username(self):
@@ -66,7 +69,8 @@ class CustomUser(BaseModel,AbstractUser):
 
 
     def check_email(self):
-        self.email=self.email.lower()
+        if self.email:
+            self.email=self.email.lower()
 
 
     def check_pass(self):
@@ -96,8 +100,9 @@ class CustomUser(BaseModel,AbstractUser):
 
 
     def save(self, *args, **kwargs):
-        self.clean()
         super(CustomUser,self).save(*args,**kwargs)
+        self.clean()
+        super(CustomUser,self).save(update_fields=['username','email','password'])
 
 
 
